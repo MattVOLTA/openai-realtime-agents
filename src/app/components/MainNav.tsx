@@ -15,9 +15,30 @@ export default function MainNav() {
   ];
 
   const handleSignOut = async () => {
-    await supabase.auth.signOut();
-    router.refresh();
-    router.push("/login");
+    try {
+      // First, sign out from Supabase
+      await supabase.auth.signOut();
+      
+      // Clear any localStorage or sessionStorage items
+      localStorage.clear();
+      sessionStorage.clear();
+      
+      // Clear cookies (except session cookies set by the server which can't be cleared client-side)
+      document.cookie.split(";").forEach(c => {
+        document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+      });
+      
+      console.log("Signed out successfully, redirecting to login page");
+      
+      // Force a full page navigation instead of using router
+      // This ensures a complete refresh including memory cache
+      window.location.href = '/login';
+    } catch (error) {
+      console.error("Error during sign out:", error);
+      // Fallback to router if the above fails
+      router.refresh();
+      router.push("/login");
+    }
   };
   
   return (

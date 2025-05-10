@@ -47,7 +47,15 @@ export async function GET(_request: Request) {
       questions: questionsByInterview[interview.id] || []
     }));
     
-    return NextResponse.json(enrichedInterviews);
+    // Create response with no-cache headers
+    const response = NextResponse.json(enrichedInterviews);
+    
+    // Add cache control headers to prevent caching
+    response.headers.set('Cache-Control', 'no-store, max-age=0');
+    response.headers.set('Pragma', 'no-cache');
+    response.headers.set('Expires', '0');
+    
+    return response;
   } catch (error) {
     console.error("Error fetching interview data:", error);
     return NextResponse.json(

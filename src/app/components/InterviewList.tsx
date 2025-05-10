@@ -16,13 +16,22 @@ export default function InterviewList() {
     const fetchInterviews = async () => {
       try {
         setLoading(true);
-        const response = await fetch("/api/interviews");
+        // Add timestamp to prevent caching and explicitly set cache to 'no-store'
+        const timestamp = new Date().getTime();
+        const response = await fetch(`/api/interviews?_=${timestamp}`, {
+          cache: 'no-store',
+          headers: {
+            'Pragma': 'no-cache',
+            'Cache-Control': 'no-cache'
+          }
+        });
         
         if (!response.ok) {
           throw new Error(`Error: ${response.status}`);
         }
         
         const data = await response.json();
+        console.log(`Fetched ${data.length} interviews`);
         setInterviews(data);
         setLoading(false);
       } catch (err: any) {
