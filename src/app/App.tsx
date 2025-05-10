@@ -927,12 +927,12 @@ function App() {
           isPTTActive={isPTTActive}
           setIsPTTActive={setIsPTTActive}
           isPTTUserSpeaking={isPTTUserSpeaking}
-          onTalkButtonDown={handleTalkButtonDown}
-          onTalkButtonUp={handleTalkButtonUp}
+          handleTalkButtonDown={handleTalkButtonDown}
+          handleTalkButtonUp={handleTalkButtonUp}
           isEventsPaneExpanded={isEventsPaneExpanded}
           setIsEventsPaneExpanded={setIsEventsPaneExpanded}
           isAudioPlaybackEnabled={isAudioPlaybackEnabled}
-          onToggleAudioPlayback={onToggleAudioPlayback}
+          setIsAudioPlaybackEnabled={setIsAudioPlaybackEnabled}
           userText={userText}
           setUserText={setUserText}
           onSendTextMessage={handleSendTextMessage}
