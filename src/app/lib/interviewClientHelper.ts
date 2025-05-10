@@ -2,7 +2,7 @@
 
 import { getSupabaseClient } from "@/app/lib/supabase";
 
-interface InterviewWithRelations {
+export interface InterviewWithRelations {
   id: string;
   admin_notes: string;
   status?: string;

@@ -7,41 +7,80 @@ import { createInterviewAgentConfig } from "@/app/lib/createInterviewConfig";
 import { getInterviewWithRelationsClient as getInterviewWithRelations } from "@/app/lib/interviewClientHelper";
 import { useTranscript } from "@/app/contexts/TranscriptContext";
 import Link from "next/link";
+import type { InterviewWithRelations as InterviewData } from "@/app/lib/interviewClientHelper";
 
 interface InterviewAgentProps {
   onAgentConfigLoaded: (config: AgentConfig) => void;
+  interviewId?: string;
+  interviewData?: InterviewData;
 }
 
-const InterviewAgent: React.FC<InterviewAgentProps> = ({ onAgentConfigLoaded }) => {
+const InterviewAgent: React.FC<InterviewAgentProps> = ({ 
+  onAgentConfigLoaded,
+  interviewId: propInterviewId,
+  interviewData: initialInterviewData
+}) => {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { setActiveInterviewId, saveTranscriptData } = useTranscript();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [interviewId, setInterviewId] = useState<string | null>(null);
+  const [currentInterviewId, setCurrentInterviewId] = useState<string | null>(propInterviewId || null);
   const [isCompleting, setIsCompleting] = useState(false);
   const [completeSuccess, setCompleteSuccess] = useState(false);
 
   useEffect(() => {
-    const id = searchParams.get("interviewId");
-    if (!id) {
-      setError("No interview ID provided");
+    const idFromParams = searchParams.get("interviewId");
+    let effectiveId = propInterviewId || idFromParams;
+
+    if (!effectiveId) {
+      if (!initialInterviewData) { 
+        setError("No interview ID provided and no preloaded data.");
+        setLoading(false);
+        return;
+      }
+      if (initialInterviewData) {
+        effectiveId = initialInterviewData.id; 
+      }
+    }
+    
+    if (!effectiveId && !initialInterviewData) { 
+      setError("Critical: Interview ID could not be determined.");
+      setLoading(false);
+      return;
+    }
+    
+    setCurrentInterviewId(effectiveId);
+    if (effectiveId) {
+        setActiveInterviewId(effectiveId); 
+    }
+
+    if (initialInterviewData) {
+      console.log("InterviewAgent: Using pre-loaded interview data:", initialInterviewData);
+      validateAndConfigureAgent(initialInterviewData);
+    } else if (effectiveId) {
+      loadInterviewData(effectiveId);
+    }
+    
+    return () => {
+      if(effectiveId) setActiveInterviewId(null);
+    };
+  }, [propInterviewId, searchParams, setActiveInterviewId, initialInterviewData]);
+
+  const validateAndConfigureAgent = (dataToValidate: InterviewData) => {
+    if (!dataToValidate.questions || dataToValidate.questions.length === 0) {
+      console.error("InterviewAgent: Preloaded data has no questions");
+      setError("This interview (from preloaded data) has no questions");
       setLoading(false);
       return;
     }
 
-    setInterviewId(id);
-    
-    // Set the active interview ID in the TranscriptContext
-    setActiveInterviewId(id);
-    
-    loadInterviewData(id);
-    
-    // Cleanup function to clear active interview ID when component unmounts
-    return () => {
-      setActiveInterviewId(null);
-    };
-  }, [searchParams, setActiveInterviewId]);
+    console.log("InterviewAgent: Preloaded data validated successfully:", dataToValidate);
+    const agentConfig = createInterviewAgentConfig(dataToValidate);
+    console.log("InterviewAgent: Agent config created from preloaded data:", agentConfig.name);
+    onAgentConfigLoaded(agentConfig);
+    setLoading(false);
+  };
 
   const loadInterviewData = async (id: string) => {
     try {
@@ -83,13 +122,13 @@ const InterviewAgent: React.FC<InterviewAgentProps> = ({ onAgentConfigLoaded }) 
   };
 
   const completeInterview = async () => {
-    if (!interviewId) return;
+    if (!currentInterviewId) return;
     
     try {
       setIsCompleting(true);
       
       // First, save the latest transcript data
-      await saveTranscriptData(interviewId);
+      await saveTranscriptData(currentInterviewId);
       
       // Then mark the interview as completed
       const response = await fetch('/api/interviews/complete', {
@@ -97,7 +136,7 @@ const InterviewAgent: React.FC<InterviewAgentProps> = ({ onAgentConfigLoaded }) 
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ interviewId }),
+        body: JSON.stringify({ interviewId: currentInterviewId }),
       });
       
       if (!response.ok) {
@@ -109,7 +148,7 @@ const InterviewAgent: React.FC<InterviewAgentProps> = ({ onAgentConfigLoaded }) 
       
       // Redirect to interview details page after short delay
       setTimeout(() => {
-        router.push(`/interviews/${interviewId}`);
+        router.push(`/interviews/${currentInterviewId}`);
       }, 2000);
       
     } catch (err: any) {
@@ -177,7 +216,7 @@ const InterviewAgent: React.FC<InterviewAgentProps> = ({ onAgentConfigLoaded }) 
           </div>
         </div>
         <p className="text-sm text-gray-600 mb-2">
-          Interview ID: <span className="font-mono text-xs">{interviewId}</span>
+          Interview ID: <span className="font-mono text-xs">{currentInterviewId}</span>
         </p>
         <p className="text-green-600 text-sm">
           ✓ Interview data loaded successfully
