@@ -1,5 +1,5 @@
 import React from "react";
-import { SessionStatus, AgentConfig } from "@/app/types";
+import { SessionStatus } from "@/app/types";
 import { useAgentActivity } from "@/app/contexts/AgentActivityContext";
 
 interface BottomToolbarProps {
@@ -7,7 +7,6 @@ interface BottomToolbarProps {
   onToggleConnection: () => void;
   isPTTActive: boolean;
   setIsPTTActive: (val: boolean) => void;
-  isPTTUserSpeaking: boolean;
   handleTalkButtonDown: () => void;
   handleTalkButtonUp: () => void;
   isEventsPaneExpanded: boolean;
@@ -21,8 +20,6 @@ interface BottomToolbarProps {
   isAgentSpeaking: boolean;
   onCancelAssistantSpeech: () => void;
   isInterviewMode: boolean;
-  currentAgentName: string;
-  currentAgentConfig?: AgentConfig;
 }
 
 function BottomToolbar({
@@ -30,7 +27,6 @@ function BottomToolbar({
   onToggleConnection,
   isPTTActive,
   setIsPTTActive,
-  isPTTUserSpeaking,
   handleTalkButtonDown,
   handleTalkButtonUp,
   isEventsPaneExpanded,
@@ -44,8 +40,6 @@ function BottomToolbar({
   isAgentSpeaking,
   onCancelAssistantSpeech,
   isInterviewMode,
-  currentAgentName,
-  currentAgentConfig,
 }: BottomToolbarProps) {
   const { activityState } = useAgentActivity();
   const isConnected = sessionStatus === "CONNECTED";

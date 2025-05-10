@@ -7,6 +7,8 @@ import InterviewAgent from "@/app/components/InterviewAgent";
 import { useEvent } from "@/app/contexts/EventContext";
 import { useTranscript } from "@/app/contexts/TranscriptContext";
 import Link from "next/link";
+import { getInterviewWithRelationsClient as getInterviewWithRelations } from "@/app/lib/interviewClientHelper";
+import type { InterviewWithRelations as InterviewData } from "@/app/lib/interviewClientHelper";
 
 function InterviewSessionContent() {
   const searchParams = useSearchParams();
@@ -18,11 +20,28 @@ function InterviewSessionContent() {
   const [sessionStatus] = useState<string>("DISCONNECTED");
   const [isAgentSpeaking, setIsAgentSpeaking] = useState(false);
   const [agentConfigLoaded, setAgentConfigLoaded] = useState(false);
+  const [interviewData, setInterviewData] = useState<InterviewData | null>(null);
+  const [isLoadingInterviewData, setIsLoadingInterviewData] = useState(false);
 
   useEffect(() => {
     if (!interviewId) {
       router.push("/interviews");
+      return;
     }
+
+    const fetchInterviewData = async () => {
+      setIsLoadingInterviewData(true);
+      try {
+        const data = await getInterviewWithRelations(interviewId);
+        setInterviewData(data);
+      } catch (error) {
+        console.error("Failed to fetch interview data for session page:", error);
+      } finally {
+        setIsLoadingInterviewData(false);
+      }
+    };
+
+    fetchInterviewData();
   }, [interviewId, router]);
 
   // Monitor transcript to detect when agent is speaking
@@ -86,6 +105,23 @@ function InterviewSessionContent() {
     );
   }
 
+  if (isLoadingInterviewData) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <p>Loading interview details...</p>
+      </div>
+    );
+  }
+
+  if (!interviewData) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <p>Could not load interview details. Please try again or select a different interview.</p>
+         <Link href="/interviews" className="text-blue-600 hover:text-blue-800 ml-2">Go to Interviews</Link>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="container mx-auto px-4 max-w-6xl">
@@ -103,8 +139,11 @@ function InterviewSessionContent() {
           {/* Left column - Interview Experience */}
           <div className="lg:col-span-1">
             <InterviewExperience 
-              interviewId={interviewId}
+              interviewData={interviewData}
               isAgentSpeaking={isAgentSpeaking}
+              isUserSpeaking={false}
+              isAgentThinking={false}
+              agentStatusMessage={"Status from admin view"}
               sessionStatus={sessionStatus}
             />
             

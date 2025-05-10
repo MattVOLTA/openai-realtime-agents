@@ -134,7 +134,6 @@ function App() {
     onFunctionResult: handleFunctionResult,
     setIsHearingUser,
     setIsThinking,
-    setIsSpeakingAudio,
     setIsSpeakingText,
   });
 
@@ -731,11 +730,6 @@ function App() {
     }
   };
 
-  // Add the missing onToggleAudioPlayback function definition
-  const onToggleAudioPlayback = () => {
-    setIsAudioPlaybackEnabled(prev => !prev);
-  };
-
   if (isInterviewMode) {
     if (isInterviewSetupLoading) {
       return (
@@ -926,7 +920,6 @@ function App() {
           onToggleConnection={onToggleConnection}
           isPTTActive={isPTTActive}
           setIsPTTActive={setIsPTTActive}
-          isPTTUserSpeaking={isPTTUserSpeaking}
           handleTalkButtonDown={handleTalkButtonDown}
           handleTalkButtonUp={handleTalkButtonUp}
           isEventsPaneExpanded={isEventsPaneExpanded}
@@ -939,8 +932,6 @@ function App() {
           isAgentSpeaking={activityState.isSpeakingAudio || activityState.isSpeakingText}
           onCancelAssistantSpeech={cancelAssistantSpeech}
           isInterviewMode={isInterviewMode}
-          currentAgentName={selectedAgentName}
-          currentAgentConfig={customAgentConfig || selectedAgentConfigSet?.find(a => a.name === selectedAgentName) || undefined}
         />
         )}
 

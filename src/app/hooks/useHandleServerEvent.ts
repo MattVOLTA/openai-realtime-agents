@@ -16,7 +16,6 @@ export interface UseHandleServerEventParams {
   onFunctionResult?: (name: string, result: any) => void;
   setIsHearingUser: (isHearing: boolean) => void;
   setIsThinking: (isThinking: boolean) => void;
-  setIsSpeakingAudio: (isSpeaking: boolean) => void;
   setIsSpeakingText: (isSpeaking: boolean) => void;
 }
 
@@ -30,7 +29,6 @@ export function useHandleServerEvent({
   onFunctionResult,
   setIsHearingUser,
   setIsThinking,
-  setIsSpeakingAudio,
   setIsSpeakingText,
 }: UseHandleServerEventParams) {
   const {
