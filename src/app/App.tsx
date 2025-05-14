@@ -222,10 +222,12 @@ function App() {
     const data = await tokenResponse.json();
     logServerEvent(data, "fetch_session_token_response");
 
-    const secret =
+    const secretRaw =
       typeof data.client_secret === "string"
         ? data.client_secret
-        : data.client_secret?.value;
+        : data.client_secret?.value || data.ephemeral_key;
+
+    const secret = secretRaw?.trim();
 
     if (!secret) {
       logClientEvent(data, "error.no_ephemeral_key");

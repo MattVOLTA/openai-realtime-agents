@@ -7,11 +7,11 @@ export async function GET(request: Request) {
     const model = searchParams.get("model") || "gpt-4o-realtime-preview";
 
     const response = await fetch("https://api.openai.com/v1/realtime/sessions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-        "Content-Type": "application/json",
-      },
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+          "Content-Type": "application/json",
+        },
       body: JSON.stringify({ model }),
     });
 
@@ -21,22 +21,23 @@ export async function GET(request: Request) {
       return NextResponse.json(
         { error: "Failed to mint realtime token" },
         { status: 502 }
-      );
+    );
     }
 
     const data = await response.json();
 
-    // Minimal logging so we can debug TTL & mismatches without leaking the full token
-    if (process.env.NODE_ENV !== "production") {
-      console.log(
-        "Minted realtime token – exp:",
-        data?.expires_at,
-        "model:",
-        model,
-        "token prefix:",
-        typeof data?.ephemeral_key === "string" ? data.ephemeral_key.slice(0, 6) : "n/a"
-      );
-    }
+    // Always log a short prefix for debugging (safe).
+    console.log(
+      "[session] Minted token exp:",
+      data?.expires_at,
+      "model:",
+      model,
+      "prefix:",
+      typeof data?.client_secret === "string"
+        ? data.client_secret.slice(0, 6)
+        : data.client_secret?.value?.slice(0, 6) ||
+          (typeof data?.ephemeral_key === "string" ? data.ephemeral_key.slice(0, 6) : "n/a")
+    );
 
     return NextResponse.json(data);
   } catch (error) {
