@@ -5,6 +5,11 @@ import { createMiddlewareClient } from "@supabase/auth-helpers-nextjs"
 import { type Database } from "@/database/database.types"
 
 export async function middleware(req: NextRequest) {
+  // Skip middleware for API routes entirely
+  if (req.nextUrl.pathname.startsWith('/api/')) {
+    return NextResponse.next()
+  }
+
   const res = NextResponse.next()
   const supabase = createMiddlewareClient<Database>({ req, res })
 
@@ -35,5 +40,14 @@ export async function middleware(req: NextRequest) {
 
 // Specify which routes this middleware should run on
 export const config = {
-  matcher: ['/((?!api|_next/static|_next/image|favicon.ico).*)'],
+  matcher: [
+    /*
+     * Match all request paths except for the ones starting with:
+     * - api (API routes)
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     */
+    '/((?!api/|_next/static|_next/image|favicon.ico).*)',
+  ],
 } 

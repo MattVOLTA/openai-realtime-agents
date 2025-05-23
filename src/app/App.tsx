@@ -68,6 +68,11 @@ function App() {
   const [sessionStatus, setSessionStatus] =
     useState<SessionStatus>("DISCONNECTED");
 
+  // Add state for connection errors and retry count
+  const [connectionError, setConnectionError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
+  const maxRetries = 3;
+
   const [isEventsPaneExpanded, setIsEventsPaneExpanded] =
     useState<boolean>(true);
   const [userText, setUserText] = useState<string>("");
@@ -241,13 +246,27 @@ function App() {
 
   const connectToRealtime = async () => {
     if (sessionStatus !== "DISCONNECTED") return;
+    
+    // Check browser compatibility
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      setConnectionError("Your browser doesn't support audio/video features required for this interview. Please use a modern browser like Chrome, Firefox, or Safari.");
+      return;
+    }
+    
+    if (!window.RTCPeerConnection) {
+      setConnectionError("Your browser doesn't support WebRTC. Please update to a modern browser.");
+      return;
+    }
+    
     setSessionStatus("CONNECTING");
+    setConnectionError(null);
 
     try {
       const EPHEMERAL_KEY = await fetchEphemeralKey();
       if (!EPHEMERAL_KEY) {
         setSessionStatus("DISCONNECTED");
         setIsMicrophoneActive(false);
+        setConnectionError("Failed to obtain session token. Please try again.");
         return;
       }
 
@@ -281,14 +300,46 @@ function App() {
               audioElementRef.current.removeEventListener('ended', handleAudioEnded); // Precautionary removal
               audioElementRef.current.addEventListener('ended', handleAudioEnded, { once: true });
             }
+          },
+          onError: (error) => {
+            console.error("Connection error:", error);
+            setConnectionError(error.message);
           }
         }
       );
       pcRef.current = pc;
       dcRef.current = dc;
 
+      // Monitor connection state
+      pc.addEventListener('connectionstatechange', () => {
+        console.log('Connection state:', pc.connectionState);
+        logClientEvent({ state: pc.connectionState }, "rtc_connection_state_change");
+        
+        switch (pc.connectionState) {
+          case 'disconnected':
+          case 'failed':
+            setConnectionError("Connection lost. Please refresh and try again.");
+            setSessionStatus("DISCONNECTED");
+            break;
+          case 'closed':
+            setSessionStatus("DISCONNECTED");
+            break;
+        }
+      });
+      
+      // Monitor ICE connection state
+      pc.addEventListener('iceconnectionstatechange', () => {
+        console.log('ICE connection state:', pc.iceConnectionState);
+        logClientEvent({ state: pc.iceConnectionState }, "ice_connection_state_change");
+        
+        if (pc.iceConnectionState === 'failed') {
+          setConnectionError("Network connection failed. Please check your internet connection.");
+        }
+      });
+
       dc.addEventListener("open", () => {
         logClientEvent({}, "data_channel.open");
+        setRetryCount(0); // Reset retry count on successful connection
         if (customAgentConfig) {
           updateSessionWithCustomConfig(false);
         } else if (selectedAgentConfigSet && selectedAgentName) {
@@ -300,6 +351,7 @@ function App() {
       });
       dc.addEventListener("error", (err: any) => {
         logClientEvent({ error: err }, "data_channel.error");
+        setConnectionError("Data channel error. Please try reconnecting.");
       });
       dc.addEventListener("message", (e: MessageEvent) => {
         handleServerEventRef.current(JSON.parse(e.data));
@@ -309,6 +361,23 @@ function App() {
     } catch (err) {
       console.error("Error connecting to realtime:", err);
       setSessionStatus("DISCONNECTED");
+      
+      // Set user-friendly error message
+      if (err instanceof Error) {
+        setConnectionError(err.message);
+      } else {
+        setConnectionError("An unexpected error occurred. Please try again.");
+      }
+      
+      // Auto-retry logic for non-permission errors
+      if (err instanceof Error && !err.message.includes("permission") && retryCount < maxRetries) {
+        setRetryCount(prev => prev + 1);
+        const retryDelay = Math.min(1000 * Math.pow(2, retryCount), 10000); // Exponential backoff
+        console.log(`Retrying connection in ${retryDelay}ms (attempt ${retryCount + 1}/${maxRetries})`);
+        setTimeout(() => {
+          connectToRealtime();
+        }, retryDelay);
+      }
     }
   };
 
@@ -541,12 +610,22 @@ function App() {
       if (isAudioPlaybackEnabled) {
         audioElementRef.current.play().catch((err) => {
           console.warn("Autoplay may be blocked by browser:", err);
+          // For candidate view, try to play on first user interaction
+          if (isCandidateView) {
+            const playOnInteraction = () => {
+              audioElementRef.current?.play().catch(console.warn);
+              document.removeEventListener('click', playOnInteraction);
+              document.removeEventListener('touchstart', playOnInteraction);
+            };
+            document.addEventListener('click', playOnInteraction, { once: true });
+            document.addEventListener('touchstart', playOnInteraction, { once: true });
+          }
         });
       } else {
         audioElementRef.current.pause();
       }
     }
-  }, [isAudioPlaybackEnabled]);
+  }, [isAudioPlaybackEnabled, isCandidateView]);
 
   useEffect(() => {
     if (selectedAgentName === "startupInterviewer" && selectedAgentConfigSet) {
@@ -946,6 +1025,27 @@ function App() {
         {engagementError && (
           <div className="absolute top-16 right-4 bg-red-100 text-red-800 px-4 py-2 rounded-md text-sm">
             Error: {engagementError}
+          </div>
+        )}
+        
+        {/* Connection error display */}
+        {connectionError && (
+          <div className={`fixed ${isCandidateView ? 'top-4 left-1/2 transform -translate-x-1/2' : 'bottom-20 right-4'} 
+            bg-red-100 text-red-800 px-6 py-3 rounded-lg shadow-lg text-sm max-w-md z-50`}>
+            <div className="flex items-start">
+              <svg className="w-5 h-5 text-red-600 mr-2 flex-shrink-0 mt-0.5" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+              </svg>
+              <div>
+                <p className="font-medium">{connectionError}</p>
+                {retryCount > 0 && retryCount < maxRetries && (
+                  <p className="text-xs mt-1">Retrying... (Attempt {retryCount + 1}/{maxRetries})</p>
+                )}
+                {connectionError.includes("Microphone") && (
+                  <p className="text-xs mt-1">Click your browser&apos;s address bar to check permissions.</p>
+                )}
+              </div>
+            </div>
           </div>
         )}
       </div>
