@@ -4,7 +4,7 @@ export async function GET(request: Request) {
   try {
     // Allow callers to specify ?model=... so the token matches their WS URL
     const { searchParams } = new URL(request.url);
-    const model = searchParams.get("model") || "gpt-4o-realtime-preview";
+    const model = searchParams.get("model") || "gpt-4o-realtime-preview-2025-06-03";
 
     const response = await fetch("https://api.openai.com/v1/realtime/sessions", {
         method: "POST",
