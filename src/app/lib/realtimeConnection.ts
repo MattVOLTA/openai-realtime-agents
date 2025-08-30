@@ -48,7 +48,7 @@ export async function createRealtimeConnection(
     const baseUrl = "https://api.openai.com/v1/realtime";
     // Use a more generic model placeholder if the exact one isn't critical for the function's structure
     // Or ensure the model name is up-to-date if it's specific to a version of this function.
-    const model = "gpt-4o-realtime-preview-2025-06-03"; // Placeholder, adjust if a specific dated version is needed by API endpoint
+    const model = "gpt-realtime";
 
     // Add timeout for OpenAI API connection
     const controller = new AbortController();

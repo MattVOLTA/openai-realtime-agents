@@ -449,11 +449,11 @@ function App() {
       session: {
         modalities: ["text", "audio"],
         instructions,
-        voice: "shimmer",
+        voice: "cedar",
         input_audio_format: "pcm16",
         output_audio_format: "pcm16",
         input_audio_transcription: { 
-          model: "gpt-4o-mini-transcribe"
+          model: "whisper-1"
         },
         input_audio_noise_reduction: {
           type: "near_field"
@@ -712,11 +712,11 @@ function App() {
       session: {
         modalities: ["text", "audio"],
         instructions: customAgentConfig.instructions,
-        voice: "shimmer",
+        voice: "cedar",
         input_audio_format: "pcm16",
         output_audio_format: "pcm16",
         input_audio_transcription: { 
-          model: "gpt-4o-mini-transcribe"
+          model: "whisper-1"
         },
         input_audio_noise_reduction: {
           type: "near_field"

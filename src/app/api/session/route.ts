@@ -4,7 +4,7 @@ export async function GET(request: Request) {
   try {
     // Allow callers to specify ?model=... so the token matches their WS URL
     const { searchParams } = new URL(request.url);
-    const model = searchParams.get("model") || "gpt-4o-realtime-preview-2025-06-03";
+    const model = searchParams.get("model") || "gpt-realtime";
 
     const response = await fetch("https://api.openai.com/v1/realtime/sessions", {
         method: "POST",
@@ -12,7 +12,16 @@ export async function GET(request: Request) {
           Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
           "Content-Type": "application/json",
         },
-      body: JSON.stringify({ model }),
+      body: JSON.stringify({ 
+        model,
+        voice: "cedar",
+        turn_detection: {
+          type: "server_vad",
+          threshold: 0.5,
+          prefix_padding_ms: 300,
+          silence_duration_ms: 200
+        }
+      }),
     });
 
     if (!response.ok) {
